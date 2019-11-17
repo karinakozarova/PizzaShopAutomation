@@ -1,0 +1,214 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace GUI_Pizza
+{
+    public partial class Form1 : Form
+    {
+        const string stringEndMario = "*M";
+        const string stringEndLuigi = "*L";
+        int pizzaCounter1 = 0;
+        int pizzaCounter2 = 0;
+        int pizzaCounter3 = 0;
+        List<string> concatPizza = new List<string>();
+        WebSocket ws = new WebSocket();
+        String chefIp = "192.168.0.102";
+        String chefPort = "85";
+        String cashierIp = "192.168.0.111";
+        String cashierPort = "84";
+        public Form1()
+        {
+            InitializeComponent();
+            ws.connect(cashierIp, cashierPort, chefIp, chefPort);
+            tmrTick.Start();
+        }
+
+        private void PnlLogo_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void BtnLogin_Click(object sender, EventArgs e)
+        {
+            switch (tbxLogin.Text)
+            {
+                case "Mario":
+                    pnlPage2.Visible = true;
+                    break;
+                case "Luigi":
+                    pnlPage3.Visible = false;
+                    break;
+                default:
+                    pnlPage2.Visible = true;
+                    break;
+            }
+
+        }
+
+        private void BtnNewOrder_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void ReadyOrders_Click(object sender, EventArgs e)
+        {
+            pnlPage3.Visible = true;
+            btnNewOrder.Enabled = false;
+            btnReadyOrders2.Enabled = false;
+        }
+
+        private void BtnNewOrder2_Click(object sender, EventArgs e)
+        {
+            pnlPage3.Visible = false;
+        }
+
+        private void BtnReadyOrders2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void BtnPizza1Add_Click(object sender, EventArgs e)
+        {
+            pizzaCounter1++;
+            lblPizza1Count.Text = pizzaCounter1.ToString();
+        }
+
+        private void BtnPizza1Remove_Click(object sender, EventArgs e)
+        {
+            pizzaCounter1--;
+            pizzaCounter1 = CheckValidity(pizzaCounter1);
+            lblPizza1Count.Text = pizzaCounter1.ToString();
+        }
+
+        private void BtnPizza2Add_Click(object sender, EventArgs e)
+        {
+            pizzaCounter2++;
+            lblPizza2Count.Text = pizzaCounter2.ToString();
+        }
+
+        private void BtnPizza2Remove_Click(object sender, EventArgs e)
+        {
+            pizzaCounter2--;
+            pizzaCounter2 = CheckValidity(pizzaCounter2);
+            lblPizza2Count.Text = pizzaCounter2.ToString();
+        }
+
+        private void BtnPizza3Add_Click(object sender, EventArgs e)
+        {
+            pizzaCounter3++;
+            lblPizza3Count.Text = pizzaCounter3.ToString();
+        }
+
+        private void Button3_Click(object sender, EventArgs e)
+        {
+            pizzaCounter3--;
+            pizzaCounter3 = CheckValidity(pizzaCounter3);
+            lblPizza3Count.Text = pizzaCounter3.ToString();
+        }
+
+        private void LblPizza1Count_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void BtnConfirmOrder_Click(object sender, EventArgs e)
+        {
+            string temp2 = "";
+            if (Convert.ToInt32(lblPizza1Count.Text) > 0 || Convert.ToInt32(lblPizza2Count.Text) > 0 || Convert.ToInt32(lblPizza3Count.Text) > 0)
+            {
+                concatPizza.Add($"[{DateTime.Now.ToString("HH:mm:ss")}]");
+                if (Convert.ToInt32(lblPizza1Count.Text) > 0)
+                {
+                    concatPizza.Add($"-Americana-{lblPizza1Count.Text}{stringEndMario}");
+                    concatPizza.Add(CheckListView(1));
+                }
+                if (Convert.ToInt32(lblPizza2Count.Text) > 0)
+                {
+                    concatPizza.Add($"-Bufalina-{lblPizza2Count.Text}{stringEndMario}");
+                    concatPizza.Add(CheckListView(2));
+                }
+                if (Convert.ToInt32(lblPizza3Count.Text) > 0)
+                {
+                    concatPizza.Add($"-Capricciosa-{lblPizza3Count.Text}{stringEndMario}");
+                    concatPizza.Add(CheckListView(3));
+                }
+            }
+            foreach (string temp in concatPizza)
+            {
+                temp2 += temp;
+            }
+            concatPizza.Clear();
+            ws.sendMsg(temp2);
+        }
+
+        private void TmrTick_Tick(object sender, EventArgs e)
+        {
+            foreach (var item in ws.messages)
+            {
+                bool isRemote = item.Contains(stringEndLuigi);
+                if (isRemote)
+                {
+                    string pizzaName = item.Replace(stringEndLuigi, "");
+                    lbxReadyOrders.Items.Add(pizzaName);
+                }
+            }
+            ws.messages.Clear();
+        }
+
+        private void BtnServe_Click(object sender, EventArgs e)
+        {
+            lbxReadyOrders.Items.Remove(lbxReadyOrders.SelectedItem);
+        }
+
+        private void TbxLogin_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private int CheckValidity(int pizzaCounter)
+        {
+            if (pizzaCounter < 0)
+            {
+                MessageBox.Show("Can't order negative amount of pizzas you jackoff");
+                pizzaCounter = 0;
+            }
+            return pizzaCounter;
+        }
+
+        private string CheckListView (int pizzaIndex) 
+        {
+            string result = "(";
+            switch (pizzaIndex)
+            {
+                case 1:
+                    foreach (object itemChecked in clbPizza1.CheckedItems)
+                    {
+                        result += ($"{itemChecked.ToString()}|");
+                    }
+                    break;
+                case 2:
+                    foreach (object itemChecked in clbPizza2.CheckedItems)
+                    {
+                        result += ($"{itemChecked.ToString()}|");
+                    }
+                    break;
+                case 3:
+                    foreach (object itemChecked in clbPizza3.CheckedItems)
+                    {
+                        result += ($"{itemChecked.ToString()}|");
+                    }
+                    break;
+            }
+            result = result.Replace(" ", "-");
+            result = result.Substring(0, result.Length - 1);
+            return result += ")";
+        }
+    }
+}
